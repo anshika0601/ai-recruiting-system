@@ -208,7 +208,7 @@ if __name__ == "__main__":
     from pathlib import Path
     from app.parser import parse_resume
 
-    # --- Step 1: embed all PDFs passed as args ---
+    # Step 1: embed all PDFs passed as args
     pdf_paths = [p for p in sys.argv[1:] if p.endswith(".pdf")]
 
     if not pdf_paths:
@@ -220,7 +220,7 @@ if __name__ == "__main__":
         resume_id = Path(pdf_path).stem
         embed_resume(parsed, resume_id)
 
-    # --- Step 2: if --jd flag provided, run a search ---
+    # Step 2: if --jd flag provided, run a search
     if "--jd" in sys.argv:
         jd_idx = sys.argv.index("--jd")
         jd_text = sys.argv[jd_idx + 1] if jd_idx + 1 < len(sys.argv) else ""
@@ -230,9 +230,9 @@ if __name__ == "__main__":
             results = search_resumes(jd_text, top_k=5)
             for i, r in enumerate(results, 1):
                 print(f"\n#{i}  {r['name']}  (score: {r['score']})")
-                print(f"     Email : {r['email']}")
-                print(f"     Mixed : {r['mixed']}")
-                print(f"     Snippet: {r['snippet'][:150]}…")
+                print(f"Email : {r['email']}")
+                print(f"Mixed : {r['mixed']}")
+                print(f"Snippet: {r['snippet'][:150]}…")
         else:
             print("Provide JD text after --jd flag.")
 
