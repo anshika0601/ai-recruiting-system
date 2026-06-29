@@ -90,19 +90,98 @@ def parse_resume(pdf_path: str) -> Dict[str, Any]:
         "parse_confidence": confidence,
     }
 
-
-def _extract_pdf_text(pdf_path: str) -> str:
+def _find_column_split(page) -> Optional[float]:
     """
-    Extract text from all pages using pdfplumber.
-    Preserves page breaks with newlines for better separation.
+    Find the x-coordinate that divides a two-column page.
+ 
+    Method: cluster all word x0 values into left-side and right-side groups.
+    If two clear clusters exist with a gap between them, it's two-column.
+    Returns the split x value, or None if single-column.
+ 
+    This is more robust than a fixed midpoint threshold because it works
+    for asymmetric layouts (e.g. 40/60 column splits) and sidebars.
     """
-    text_parts = []
+    words = page.extract_words()
+    if len(words) < 10:           # too few words to decide
+        return None
+ 
+    # Collect unique x0 starts, rounded to nearest 5pt to reduce noise
+    x_starts = sorted(set(round(float(w["x0"]) / 5) * 5 for w in words))
+ 
+    if not x_starts:
+        return None
+ 
+    page_width = page.width
+    left_margin  = page_width * 0.15   # ignore page margins
+    right_margin = page_width * 0.85
+ 
+    # Look for the largest gap between consecutive x-start clusters
+    # that falls in the middle 30-70% of the page
+    centre_min = page_width * 0.30
+    centre_max = page_width * 0.70
+ 
+    best_gap   = 0.0
+    split_x    = None
+ 
+    for i in range(len(x_starts) - 1):
+        gap = x_starts[i + 1] - x_starts[i]
+        mid = (x_starts[i] + x_starts[i + 1]) / 2
+        if centre_min <= mid <= centre_max and gap > best_gap:
+            best_gap = gap
+            split_x  = mid
+ 
+    # Only call it two-column if the gap is meaningful (>= 15pt ~ 0.5cm)
+    if best_gap >= 15:
+        return split_x
+ 
+    return None
+ 
+ 
+def _extract_column_text(page, x_min: float, x_max: float) -> str:
+    """Extract text from a horizontal slice of the page."""
+    cropped = page.crop((x_min, 0, x_max, page.height))
+    return cropped.extract_text() or ""
+ 
+ 
+def _extract_page_text(page) -> Tuple[str, str]:
+    """
+    Extract text from one page, handling single vs two-column layouts.
+    Returns (text, layout_type) where layout_type is 'single' or 'two_column'.
+    """
+    split_x = _find_column_split(page)
+ 
+    if split_x:
+        left  = _extract_column_text(page, 0, split_x)
+        right = _extract_column_text(page, split_x, page.width)
+        # Newline between columns so the right column's first header is
+        # on its own line and gets detected by _detect_section_header
+        return left.rstrip() + "\n\n" + right.lstrip(), "two_column"
+ 
+    return page.extract_text() or "", "single_column"
+ 
+ 
+def _extract_pdf_text(pdf_path: str) -> Tuple[str, str]:
+    """
+    Extract full document text and report overall layout type.
+    Returns (full_text, layout_label).
+    """
+    parts   = []
+    layouts = []
+ 
     with pdfplumber.open(pdf_path) as pdf:
         for page in pdf.pages:
-            page_text = page.extract_text()
-            if page_text:
-                text_parts.append(page_text)
-    return "\n".join(text_parts)
+            text, layout = _extract_page_text(page)
+            if text.strip():
+                parts.append(text)
+            layouts.append(layout)
+ 
+    overall_layout = (
+        "two_column" if layouts.count("two_column") > layouts.count("single_column")
+        else "single_column"
+    )
+    return "\n".join(parts), overall_layout
+ 
+
 
 
 def _extract_name(raw_text: str) -> Optional[str]:
