@@ -1,0 +1,14 @@
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+langgraph==0.2.45
+langchain-core==0.3.15
+python-dotenv==1.0.1
+pydantic==2.9.2
+pydantic-settings==2.6.0
+
+# Coming in later days, listed now so you can install once:
+# anthropic
+# pdfplumber
+# pytesseract
+# chromadb
+# voyageai
