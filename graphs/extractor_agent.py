@@ -22,7 +22,6 @@ from graphs.pipeline_state import PipelineState
 
 load_dotenv()
 
-# ---------------------------------------------------------------------------
 # Groq client — loaded once
 # ---------------------------------------------------------------------------
 
@@ -36,7 +35,7 @@ def _get_client() -> Groq:
 
 MODEL = "llama-3.3-70b-versatile"
 
-# ---------------------------------------------------------------------------
+
 # Extraction prompt
 # ---------------------------------------------------------------------------
 
@@ -68,7 +67,7 @@ Return ONLY this JSON structure:
   "career_trajectory": "improving | stable | declining | unclear"
 }}"""
 
-# ---------------------------------------------------------------------------
+
 # Extractor node
 # ---------------------------------------------------------------------------
 
@@ -140,8 +139,8 @@ def extractor_node(state: PipelineState) -> Dict[str, Any]:
         }
 
 
-# ---------------------------------------------------------------------------
-# CLI test — python -m graphs.extractor_agent
+
+# CLI test 
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
@@ -152,7 +151,7 @@ if __name__ == "__main__":
         print("Usage: python -m graphs.extractor_agent resume.pdf")
         sys.exit(1)
 
-    # Sample JD for testing
+    # Sample job description for testing
     test_jd = """
     Senior Software Engineer — Python
     Requirements:
