@@ -166,24 +166,52 @@ def _extract_page_text(page) -> tuple[str, str]:
  
 def _extract_pdf_text(pdf_path: str) -> tuple[str, str]:
     """
-    Extract full document text and report overall layout type.
+    Extract text — tries column-aware pdfplumber first.
+    If yield is too low (image-based PDF), calls the OCR fallback hook.
     Returns (full_text, layout_label).
     """
     parts   = []
     layouts = []
- 
+
     with pdfplumber.open(pdf_path) as pdf:
         for page in pdf.pages:
-            text, layout = _extract_page_text(page)
+            text, layout = _extract_page_text(page)   # ← unpack tuple
             if text.strip():
                 parts.append(text)
             layouts.append(layout)
- 
+
+    full_text = "\n".join(parts)
+
     overall_layout = (
-        "two_column" if layouts.count("two_column") > layouts.count("single_column")
+        "two_column"
+        if layouts.count("two_column") > layouts.count("single_column")
         else "single_column"
     )
-    return "\n".join(parts), overall_layout
+
+    # ── OCR fallback hook ────────────────────────────────────────────────
+    if len(full_text.strip()) < 100:
+        print("[parser] ⚠ Low text yield — OCR fallback needed")
+        print("[parser] ℹ Image-based PDF detected. "
+              "Connect a cloud vision API here for production.")
+        full_text = _ocr_fallback(pdf_path)
+
+    return full_text, overall_layout
+
+
+def _ocr_fallback(pdf_path: str) -> str:
+    """
+    OCR fallback stub — returns empty string with a clear message.
+
+    Production swap: replace body with a call to:
+      - Mistral Pixtral API  (free tier, recommended)
+      - AWS Textract         (pay per page)
+      - Google Document AI   (pay per page)
+
+    This function just needs to return extracted text as a plain string.
+    """
+    print("[parser] ✗ OCR fallback not implemented — returning empty text")
+    print("[parser] ✗ To fix: implement _ocr_fallback() with a cloud vision API")
+    return ""
  
 
 
