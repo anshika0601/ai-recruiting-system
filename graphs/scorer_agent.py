@@ -107,40 +107,41 @@ def _score_dimension_once(
         )
 
         raw = response.choices[0].message.content.strip()
-
-        # Strip markdown fences
+          # Strip markdown fences
         if raw.startswith("```"):
-         raw = raw.split("```")[1]
-        if raw.startswith("json"):
-         raw = raw[4:]
+          raw = raw.split("```")[1]
+          if raw.startswith("json"):
+            raw = raw[4:]
         raw = raw.strip()
 
-        # Find the JSON object boundaries — model sometimes adds text before/after
+         # Find JSON object boundaries
         start = raw.find("{")
         end   = raw.rfind("}") + 1
         if start != -1 and end > start:
-         raw = raw[start:end]
-
-        # Replace smart quotes that some models output
-        raw = raw.replace("\u2018", "'").replace("\u2019", "'")
-        raw = raw.replace("\u201c", '"').replace("\u201d", '"')
+          raw = raw[start:end]
         try:
            parsed = json.loads(raw)
         except json.JSONDecodeError:
-        # Last resort: extract fields individually via regex
-          import re
-          evidence_match=re.search(r'"evidence"\s*:\s*\[(.*?)\]', raw, re.DOTALL)
-          reasoning_match=re.search(r'"reasoning"\s*:\s*"(.*?)"', raw, re.DOTALL)
-          score_match=re.search(r'"score"\s*:\s*(\d)', raw)
-
-          parsed = {
-        "evidence":  json.loads(f"[{evidence_match.group(1)}]") if evidence_match else [],
-        "reasoning": reasoning_match.group(1) if reasoning_match else "",
-        "score":     int(score_match.group(1)) if score_match else 1,
-    }
-          print(f"[scorer]   ⚠ Used regex fallback for JSON extraction")
-  
-
+           try:
+             # Replace problematic quote characters
+             clean = (raw
+             .replace("\u2018", " ").replace("\u2019", " ")  # smart single quotes → space
+             .replace("\u201c", '"').replace("\u201d", '"')   # smart double quotes → straight
+             .replace("'s ", "s ")                            # possessives e.g. candidate's
+            .replace("'t ", "t ")                            # contractions e.g. don't
+        )
+             parsed = json.loads(clean)
+           except json.JSONDecodeError:
+               # Last resort: extract fields individually via regex
+               import re
+               score_match     = re.search(r'"score"\s*:\s*(\d)', raw)
+               reasoning_match = re.search(r'"reasoning"\s*:\s*"([^"]*)"', raw)
+               parsed = {
+            "evidence":  [],
+            "reasoning": reasoning_match.group(1) if reasoning_match else "",
+            "score":     int(score_match.group(1)) if score_match else 1,
+        }
+               print(f"[scorer]   ⚠ Used regex fallback for JSON extraction")  
         # Clamp score to valid 1-5 range in case model drifts
         score = int(parsed.get("score", 1))
         score = max(1, min(5, score))
