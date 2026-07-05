@@ -3,11 +3,9 @@ graphs/pipeline_state.py
 
 The shared state that flows through every agent in the pipeline.
 
-This is the single most important file to understand in Week 2.
 Every agent reads from this state and writes partial updates back to it.
 LangGraph merges those updates automatically — no manual passing of return values.
 
-Think of it as the "whiteboard" every agent can read and write to.
 """
 from typing import Any, Dict, List, Optional, TypedDict
 
