@@ -47,6 +47,7 @@ Requirements:
 
 JDS = {
     "Software Engineer": JD_SE,
+    "Fashion Designer": JD_FD,
     
 }
 
