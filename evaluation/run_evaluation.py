@@ -47,7 +47,7 @@ Requirements:
 
 JDS = {
     "Software Engineer": JD_SE,
-    "Fashion Designer": JD_FD,
+    #"Fashion Designer": JD_FD,
     
 }
 
@@ -94,7 +94,6 @@ def get_human_rank(resume_id, jd_name):
     return None
 
 
-# ── main evaluation ───────────────────────────────────────────────────────────
 
 def run_evaluation():
     print("\n" + "=" * 62)
@@ -205,7 +204,7 @@ def run_evaluation():
 
     print(f"{'=' * 62}")
 
-    out_path = "evaluation/day15_results.json"
+    out_path = "evaluation/day15_results_1.json"
     os.makedirs("evaluation", exist_ok=True)
     with open(out_path, "w") as f:
         json.dump(eval_summary, f, indent=2, default=str)

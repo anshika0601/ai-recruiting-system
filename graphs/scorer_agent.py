@@ -30,7 +30,7 @@ def _get_client() -> Groq:
         _client = Groq(api_key=os.getenv("GROQ_API_KEY"))
     return _client
 
-MODEL = "llama-3.3-70b-versatile"
+MODEL = "llama-3.1-8b-instant"
 
 # Self-consistency: run each dimension this many times, take the median
 VOTES_PER_DIMENSION = 3

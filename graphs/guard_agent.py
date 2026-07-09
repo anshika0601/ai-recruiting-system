@@ -31,7 +31,7 @@ def _get_client() -> Groq:
         _client = Groq(api_key=os.getenv("GROQ_API_KEY"))
     return _client
 
-MODEL = "llama-3.3-70b-versatile"
+MODEL = "llama-3.1-8b-instant"
 
 # Penalty per confirmed flag (applied as deduction from final score 0-10)
 PENALTY_PER_FLAG = 0.5
