@@ -19,6 +19,7 @@ from dotenv import load_dotenv
 from groq import Groq
 from graphs.pipeline_state import PipelineState, DimensionScore, AgentScore
 from graphs.rubric import RUBRIC, DIMENSION_ORDER, format_anchors
+from langsmith import traceable
 
 load_dotenv()
 
@@ -71,6 +72,8 @@ Return ONLY this JSON:
   "reasoning": "1-2 sentence explanation",
   "score": <integer 1-5>
 }}"""
+
+@traceable(name="ScoreDimension", tags=["scorer"])
 
 # Single scoring run for one dimension
 # ---------------------------------------------------------------------------
@@ -202,6 +205,7 @@ def _score_dimension_with_voting(
         "disagreement": disagreement,
     }
 
+@traceable(name="ScorerAgent", tags=["scorer"])
 
 # Scorer node — entry point called by LangGraph
 # ---------------------------------------------------------------------------

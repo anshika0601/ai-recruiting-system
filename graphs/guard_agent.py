@@ -15,6 +15,7 @@ Output (to PipelineState):   guard_flags, guard_penalty
 import json
 import os
 from typing import Any, Dict, List
+from langsmith import traceable
 
 from dotenv import load_dotenv
 from groq import Groq
@@ -106,6 +107,7 @@ def _calculate_penalty(flags: List[Dict]) -> float:
     total = sum(SEVERITY_WEIGHTS.get(f.get("severity", "low"), 0.25) for f in flags)
     return min(total * PENALTY_PER_FLAG, MAX_PENALTY)
 
+@traceable(name="GuardAgent", tags=["guard"])
 
 # Guard node
 # ---------------------------------------------------------------------------

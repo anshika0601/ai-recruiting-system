@@ -17,6 +17,7 @@ from typing import Any, Dict
 
 from dotenv import load_dotenv
 from groq import Groq
+from langsmith import traceable
 
 from graphs.pipeline_state import PipelineState
 
@@ -67,9 +68,10 @@ Return ONLY this JSON structure:
   "career_trajectory": "improving | stable | declining | unclear"
 }}"""
 
-
+@traceable(name="ExtractorAgent", tags=["extractor"])
 # Extractor node
 # ---------------------------------------------------------------------------
+
 
 def extractor_node(state: PipelineState) -> Dict[str, Any]:
     """

@@ -14,8 +14,9 @@ from typing import Any, Dict
 
 from graphs.pipeline_state import PipelineState
 from graphs.rubric import RUBRIC, DIMENSION_ORDER
+from langsmith import traceable
 
-
+@traceable(name="Aggregator", tags=["aggregator"])
 def aggregator_node(state: PipelineState) -> Dict[str, Any]:
     """
     LangGraph node: compute weighted final score from dimension medians.
