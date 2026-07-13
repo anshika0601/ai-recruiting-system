@@ -208,7 +208,7 @@ def _score_dimension_with_voting(
 @traceable(name="ScorerAgent", tags=["scorer"])
 
 # Scorer node — entry point called by LangGraph
-# ---------------------------------------------------------------------------
+
 
 def scorer_node(state: PipelineState) -> Dict[str, Any]:
     """
