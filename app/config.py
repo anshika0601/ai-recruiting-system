@@ -3,12 +3,14 @@ Centralized config. Import `settings` anywhere you need an env var.
 Keeps os.getenv() calls out of business logic and gives you validation for free.
 """
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
+import os
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     # LLM providers
+    groq_api_key: str = os.getenv("GROQ_API_KEY", "")
+    groq_model: str = "llama-3.3-70b-versatile"
     anthropic_api_key: str = ""
     openai_api_key: str = ""
 
