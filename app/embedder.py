@@ -205,35 +205,43 @@ def clear_all_resumes() -> None:
 
 if __name__ == "__main__":
     import sys
+    import json
     from pathlib import Path
-    from app.parser import parse_resume
 
-    # Step 1: embed all PDFs passed as args
-    pdf_paths = [p for p in sys.argv[1:] if p.endswith(".pdf")]
+    args = sys.argv[1:]
 
-    if not pdf_paths:
-        print("Usage: python -m app.embedder resume1.pdf resume2.pdf ... --jd 'your JD text'")
-        sys.exit(1)
+    # Separate PDF paths from flags
+    pdf_paths = [a for a in args if a.endswith(".pdf")]
+    jd_text   = None
 
-    for pdf_path in pdf_paths:
-        parsed = parse_resume(pdf_path)
-        resume_id = Path(pdf_path).stem
-        embed_resume(parsed, resume_id)
+    if "--jd" in args:
+        jd_idx  = args.index("--jd")
+        jd_text = args[jd_idx + 1] if jd_idx + 1 < len(args) else None
 
-    # Step 2: if --jd flag provided, run a search
-    if "--jd" in sys.argv:
-        jd_idx = sys.argv.index("--jd")
-        jd_text = sys.argv[jd_idx + 1] if jd_idx + 1 < len(sys.argv) else ""
+    # Only embed if PDFs were passed
+    if pdf_paths:
+        from app.parser import parse_resume
+        for pdf_path in pdf_paths:
+            parsed    = parse_resume(pdf_path)
+            resume_id = Path(pdf_path).stem
+            embed_resume(parsed, resume_id)
 
-        if jd_text:
-            print("\n--- Ranked results ---")
-            results = search_resumes(jd_text, top_k=5)
+    # Search if JD was passed
+    if jd_text:
+        print(f"\n[embedder] Searching {_get_collection().count()} stored resumes...\n")
+        results = search_resumes(jd_text, top_k=8)
+        if not results:
+            print("No resumes found. Embed some resumes first.")
+        else:
+            print("--- Ranked results ---")
             for i, r in enumerate(results, 1):
                 print(f"\n#{i}  {r['name']}  (score: {r['score']})")
-                print(f"Email : {r['email']}")
-                print(f"Mixed : {r['mixed']}")
-                print(f"Snippet: {r['snippet'][:150]}…")
-        else:
-            print("Provide JD text after --jd flag.")
-
-    print(f"\n[embedder] Total resumes in store: {_get_collection().count()}")
+                print(f"     Email  : {r['email']}")
+                print(f"     Mixed  : {r['mixed']}")
+                print(f"     Snippet: {r['snippet'][:150]}…")
+    elif not pdf_paths:
+        print("Usage:")
+        print("  Embed resumes : python -m app.embedder resume1.pdf resume2.pdf")
+        print("  Search only   : python -m app.embedder --jd \"your JD text here\"")
+        print("  Both at once  : python -m app.embedder resume1.pdf --jd \"your JD text\"")
+        print(f"\n  Resumes currently stored: {_get_collection().count()}")
