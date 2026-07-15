@@ -14,7 +14,7 @@ from app.config import settings
 MODEL_NAME   = "all-MiniLM-L6-v2"
 COLLECTION   = "resumes"
 
-# Weights for combining section embeddings into one resume representation.
+# Weights for embeddings into one resume representation.
 # Experience and skills matter most for JD matching.
 SECTION_WEIGHTS: Dict[str, float] = {
     "summary":    0.15,
