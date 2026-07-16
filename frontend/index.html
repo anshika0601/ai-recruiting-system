@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Recruiting Platform</title>
+<style>
+  :root {
+    --bg:        #0F1117;
+    --surface:   #1A1D27;
+    --border:    #2A2D3A;
+    --accent:    #6C63FF;
+    --accent-lo: rgba(108,99,255,0.12);
+    --green:     #22C55E;
+    --amber:     #F59E0B;
+    --red:       #EF4444;
+    --text:      #E8E9F0;
+    --muted:     #7B7F96;
+    --radius:    10px;
+    --mono:      'JetBrains Mono', 'Fira Code', monospace;
+    --sans:      'Inter', system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; min-height: 100vh; }
+  header { padding: 18px 32px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
+  header h1 { font-size: 16px; font-weight: 600; letter-spacing: -0.3px; }
+  header span { font-size: 11px; color: var(--muted); background: var(--surface); border: 1px solid var(--border); padding: 2px 8px; border-radius: 20px; }
+  .layout { display: grid; grid-template-columns: 340px 1fr; height: calc(100vh - 57px); }
+  .sidebar { border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+  .sidebar-section { padding: 20px; border-bottom: 1px solid var(--border); }
+  .sidebar-section h2 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin-bottom: 12px; }
+  .upload-zone { border: 1.5px dashed var(--border); border-radius: var(--radius); padding: 24px; text-align: center; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+  .upload-zone:hover, .upload-zone.drag-over { border-color: var(--accent); background: var(--accent-lo); }
+  .upload-zone input { display: none; }
+  .upload-zone p { color: var(--muted); font-size: 12px; margin-top: 6px; }
+  .upload-zone .icon { font-size: 24px; margin-bottom: 4px; }
+  textarea { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); font-family: var(--sans); font-size: 13px; padding: 10px 12px; resize: vertical; min-height: 120px; outline: none; transition: border-color 0.15s; }
+  textarea:focus { border-color: var(--accent); }
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 6px; border: none; font-size: 13px; font-weight: 500; cursor: pointer; transition: opacity 0.15s, transform 0.1s; }
+  .btn:active { transform: scale(0.98); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-primary { background: var(--accent); color: #fff; width: 100%; justify-content: center; }
+  .btn-primary:hover:not(:disabled) { opacity: 0.88; }
+  .btn-ghost { background: var(--surface); color: var(--text); border: 1px solid var(--border); font-size: 11px; padding: 4px 10px; }
+  .resume-list { flex: 1; overflow-y: auto; padding: 12px; }
+  .resume-card { padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 6px; cursor: pointer; transition: background 0.12s, border-color 0.12s; display: flex; align-items: center; justify-content: space-between; }
+  .resume-card:hover { background: var(--surface); }
+  .resume-card.selected { border-color: var(--accent); background: var(--accent-lo); }
+  .resume-card .name { font-weight: 500; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
+  .resume-card .id { font-size: 10px; color: var(--muted); font-family: var(--mono); }
+  .main { display: flex; flex-direction: column; overflow: hidden; }
+  .main-toolbar { padding: 14px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
+  .main-toolbar h2 { font-size: 14px; font-weight: 600; flex: 1; }
+  .main-content { flex: 1; overflow-y: auto; padding: 24px; }
+  .empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--muted); gap: 8px; }
+  .empty .big { font-size: 40px; }
+  .empty p { font-size: 13px; max-width: 280px; text-align: center; }
+  .score-hero { display: flex; align-items: flex-end; gap: 16px; margin-bottom: 28px; }
+  .score-number { font-size: 64px; font-weight: 700; font-family: var(--mono); line-height: 1; }
+  .score-meta { padding-bottom: 6px; }
+  .score-meta .candidate { font-size: 18px; font-weight: 600; }
+  .score-meta .sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .review-badge { display: inline-flex; align-items: center; gap: 5px; background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.3); color: var(--amber); font-size: 11px; font-weight: 500; padding: 4px 10px; border-radius: 20px; margin-left: 8px; }
+  .section-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin-bottom: 12px; }
+  .dimension { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 8px; }
+  .dimension.has-disagreement { border-color: rgba(245,158,11,0.4); }
+  .dim-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .dim-label { font-weight: 500; font-size: 13px; }
+  .dim-score { font-family: var(--mono); font-size: 13px; font-weight: 600; }
+  .dim-bar-wrap { height: 4px; background: var(--border); border-radius: 2px; margin-bottom: 8px; overflow: hidden; }
+  .dim-bar { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
+  .dim-evidence { font-size: 11px; color: var(--muted); font-family: var(--mono); line-height: 1.5; }
+  .dim-reasoning { font-size: 12px; color: var(--text); margin-top: 6px; line-height: 1.5; opacity: 0.8; }
+  .flags-wrap { margin-top: 20px; }
+  .flag { display: flex; gap: 10px; padding: 10px 12px; border-radius: 8px; margin-bottom: 6px; font-size: 12px; }
+  .flag.high   { background: rgba(239,68,68,0.08);  border: 1px solid rgba(239,68,68,0.2); }
+  .flag.medium { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); }
+  .flag.low    { background: rgba(108,99,255,0.08); border: 1px solid rgba(108,99,255,0.2); }
+  .flag-type { font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; padding-top: 1px; }
+  .flag.high .flag-type { color: var(--red); }
+  .flag.medium .flag-type { color: var(--amber); }
+  .flag.low .flag-type { color: var(--accent); }
+  .loading { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 16px; color: var(--muted); }
+  .spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-steps { font-size: 12px; text-align: center; line-height: 2; }
+  #toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 16px; font-size: 13px; opacity: 0; transition: opacity 0.2s; pointer-events: none; z-index: 100; }
+  #toast.show { opacity: 1; }
+  #toast.error { border-color: var(--red); color: var(--red); }
+  #toast.success { border-color: var(--green); color: var(--green); }
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+    <rect width="20" height="20" rx="5" fill="#6C63FF"/>
+    <path d="M5 10h10M10 5v10" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+  </svg>
+  <h1>AI Recruiting Platform</h1>
+  <span id="resume-count">0 resumes</span>
+</header>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <h2>Upload Resume</h2>
+      <div class="upload-zone" id="upload-zone">
+        <input type="file" id="file-input" accept=".pdf" multiple>
+        <div class="icon">📄</div>
+        <strong>Drop PDF here</strong>
+        <p>or click to browse</p>
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <h2>Job Description</h2>
+      <textarea id="jd-input" placeholder="Paste job description here...&#10;&#10;e.g. Software Engineer — Python, REST APIs, 3+ years..."></textarea>
+    </div>
+    <div class="sidebar-section">
+      <button class="btn btn-primary" id="screen-btn" disabled>▶ Screen Selected Resume</button>
+    </div>
+    <div class="sidebar-section" style="flex:1;overflow:hidden;display:flex;flex-direction:column;border-bottom:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <h2 style="margin:0">Stored Resumes</h2>
+        <button class="btn btn-ghost" onclick="loadResumes()">↻ Refresh</button>
+      </div>
+      <div class="resume-list" id="resume-list">
+        <p style="color:var(--muted);font-size:12px;padding:8px 4px;">Loading...</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="main-toolbar">
+      <h2 id="panel-title">Select a resume to screen</h2>
+      <button class="btn btn-ghost" onclick="runSearch()">🔍 Quick Search</button>
+    </div>
+    <div class="main-content" id="main-content">
+      <div class="empty">
+        <div class="big">🎯</div>
+        <strong>No candidate selected</strong>
+        <p>Upload a resume, select it from the list, paste a JD, then click Screen.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const API = 'http://localhost:8000';
+let selectedResumeId = null;
+
+function toast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show ' + type;
+  setTimeout(() => t.className = '', 2800);
+}
+
+async function loadResumes() {
+  try {
+    const r = await fetch(`${API}/resumes`);
+    const d = await r.json();
+    const list = document.getElementById('resume-list');
+    document.getElementById('resume-count').textContent = `${d.total} resume${d.total !== 1 ? 's' : ''}`;
+    if (!d.resumes.length) {
+      list.innerHTML = '<p style="color:var(--muted);font-size:12px;padding:8px 4px;">No resumes yet — upload one above.</p>';
+      return;
+    }
+    list.innerHTML = d.resumes.map(r => `
+      <div class="resume-card ${r.id === selectedResumeId ? 'selected' : ''}" onclick="selectResume('${r.id}','${(r.name||'').replace(/'/g,"\\'")}')">
+        <div>
+          <div class="name">${r.name || 'Unknown'}</div>
+          <div class="id">${r.id}</div>
+        </div>
+        <button class="btn btn-ghost" style="padding:3px 8px;font-size:10px;" onclick="event.stopPropagation();deleteResume('${r.id}')">✕</button>
+      </div>`).join('');
+  } catch(e) { toast('Cannot reach API — is uvicorn running?', 'error'); }
+}
+
+function selectResume(id, name) {
+  selectedResumeId = id;
+  document.getElementById('panel-title').textContent = name || id;
+  document.getElementById('screen-btn').disabled = false;
+  document.querySelectorAll('.resume-card').forEach(c => {
+    c.classList.toggle('selected', c.querySelector('.id').textContent === id);
+  });
+  document.getElementById('main-content').innerHTML = `
+    <div class="empty"><div class="big">📋</div><strong>${name}</strong>
+    <p>Add a job description on the left, then click Screen Selected Resume.</p></div>`;
+}
+
+async function uploadFile(file) {
+  const fd = new FormData();
+  fd.append('file', file);
+  try {
+    const r = await fetch(`${API}/resumes/upload`, { method: 'POST', body: fd });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || 'Upload failed');
+    toast(`✓ Uploaded: ${d.candidate_name}`, 'success');
+    loadResumes();
+  } catch(e) { toast(`Upload failed: ${e.message}`, 'error'); }
+}
+
+const zone = document.getElementById('upload-zone');
+const fileInput = document.getElementById('file-input');
+zone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => { [...e.target.files].forEach(uploadFile); fileInput.value = ''; });
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('drag-over'); [...e.dataTransfer.files].filter(f => f.name.endsWith('.pdf')).forEach(uploadFile); });
+
+document.getElementById('screen-btn').addEventListener('click', async () => {
+  const jd = document.getElementById('jd-input').value.trim();
+  if (!jd) { toast('Add a job description first', 'error'); return; }
+  if (!selectedResumeId) { toast('Select a resume first', 'error'); return; }
+  const btn = document.getElementById('screen-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Screening...';
+  showLoading();
+  try {
+    const r = await fetch(`${API}/screen`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ resume_id: selectedResumeId, jd_text: jd }),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || 'Screening failed');
+    renderResult(d);
+  } catch(e) {
+    toast(`Screening failed: ${e.message}`, 'error');
+    document.getElementById('main-content').innerHTML = `<div class="empty"><div class="big">⚠️</div><p>${e.message}</p></div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '▶ Screen Selected Resume';
+  }
+});
+
+async function runSearch() {
+  const jd = document.getElementById('jd-input').value.trim();
+  if (!jd) { toast('Add a job description first', 'error'); return; }
+  try {
+    const r = await fetch(`${API}/search`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jd_text: jd, top_k: 9 }) });
+    const d = await r.json();
+    renderSearch(d.results);
+  } catch(e) { toast('Search failed', 'error'); }
+}
+
+function renderSearch(results) {
+  document.getElementById('panel-title').textContent = 'Semantic Search Results';
+  document.getElementById('main-content').innerHTML = `
+    <p class="section-title">Ranked by embedding similarity — no agents</p>
+    ${results.map((r, i) => `
+      <div class="dimension" style="cursor:pointer" onclick="selectResume('${r.id}','${(r.name||'').replace(/'/g,"\\'")}')">
+        <div class="dim-header">
+          <span class="dim-label">#${i+1} &nbsp; ${r.name}</span>
+          <span class="dim-score" style="color:var(--accent)">${(r.score*10).toFixed(1)}/10</span>
+        </div>
+        <div class="dim-bar-wrap"><div class="dim-bar" style="width:${r.score*100}%;background:var(--accent)"></div></div>
+        <div class="dim-evidence">${r.id}</div>
+      </div>`).join('')}`;
+}
+
+async function deleteResume(id) {
+  if (!confirm(`Delete "${id}"?`)) return;
+  await fetch(`${API}/resumes/${id}`, { method: 'DELETE' });
+  if (selectedResumeId === id) selectedResumeId = null;
+  toast('Resume deleted', 'success');
+  loadResumes();
+}
+
+function showLoading() {
+  const steps = ['Extracting skills & facts','Scoring 5 rubric dimensions (×3 each)','Running guard checks','Computing final score'];
+  let current = 0;
+  const html = () => `<div class="loading"><div class="spinner"></div>
+    <div class="loading-steps">${steps.map((s,i) => `
+      <div style="color:${i<current?'var(--green)':i===current?'var(--text)':'var(--muted)'}">
+        ${i<current?'✓':i===current?'→':'·'} ${s}</div>`).join('')}
+    </div><p style="font-size:11px">Takes 30–60 seconds</p></div>`;
+  document.getElementById('main-content').innerHTML = html();
+  const iv = setInterval(() => {
+    if (current < steps.length-1) current++;
+    document.getElementById('main-content').innerHTML = html();
+    if (current >= steps.length-1) clearInterval(iv);
+  }, 12000);
+}
+
+function scoreColor(s) { return s>=7?'var(--green)':s>=4?'var(--amber)':'var(--red)'; }
+
+function renderResult(d) {
+  const score = d.final_score ?? 0;
+  const breakdown = d.score_breakdown?.dimensions ?? {};
+  const flags = d.guard_flags ?? [];
+  document.getElementById('main-content').innerHTML = `
+    <div class="score-hero">
+      <div class="score-number" style="color:${scoreColor(score)}">${score.toFixed(1)}</div>
+      <div class="score-meta">
+        <div class="candidate">${d.candidate_name}${d.needs_review?'<span class="review-badge">⚠ Review needed</span>':''}</div>
+        <div class="sub">out of 10.00 &nbsp;·&nbsp; ${flags.length} guard flag${flags.length!==1?'s':''}</div>
+      </div>
+    </div>
+    <p class="section-title">Score Breakdown</p>
+    ${Object.entries(breakdown).map(([k,b]) => `
+      <div class="dimension ${b.disagreement?'has-disagreement':''}">
+        <div class="dim-header">
+          <span class="dim-label">${b.disagreement?'⚠ ':''}${b.label}</span>
+          <span class="dim-score">${b.median_score}/5 <span style="color:var(--muted);font-weight:400;font-size:11px">${b.contribution>=0?'+':''}${b.contribution.toFixed(2)} pts</span></span>
+        </div>
+        <div class="dim-bar-wrap"><div class="dim-bar" style="width:${b.median_score/5*100}%;background:${scoreColor(b.median_score*2)}"></div></div>
+        ${b.evidence?.length?`<div class="dim-evidence">Evidence: ${b.evidence.join(' · ')}</div>`:''}
+        <div class="dim-reasoning">${b.reasoning}</div>
+      </div>`).join('')}
+    ${flags.length?`<div class="flags-wrap"><p class="section-title" style="margin-top:20px">Guard Flags</p>
+      ${flags.map(f=>`<div class="flag ${f.severity}"><span class="flag-type">${f.severity} · ${f.type}</span><span>${f.evidence}</span></div>`).join('')}</div>`:''}
+    ${d.extracted_facts?`<div style="margin-top:20px"><p class="section-title">Extracted Facts</p>
+      <div class="dimension"><div class="dim-evidence" style="line-height:1.8">
+        Skills: ${(d.extracted_facts.skills_found||[]).join(', ')||'none'}<br>
+        JD Matches: ${(d.extracted_facts.skills_matched||[]).join(', ')||'none'}<br>
+        Experience: ${d.extracted_facts.years_experience??0} years<br>
+        Companies: ${(d.extracted_facts.companies||[]).join(', ')||'none'}<br>
+        Trajectory: ${d.extracted_facts.career_trajectory||'unclear'}
+      </div></div></div>`:''}`;
+}
+
+loadResumes();
+</script>
+</body>
+</html>
