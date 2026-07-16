@@ -5,6 +5,7 @@ The shared state that flows through every agent in the pipeline.
 
 Every agent reads from this state and writes partial updates back to it.
 LangGraph merges those updates automatically — no manual passing of return values.
+Updated added domain_verdict, domain_penalty, transferable_skills.
 
 """
 from typing import Any, Dict, List, Optional, TypedDict
@@ -57,6 +58,12 @@ class PipelineState(TypedDict):
     #   "red_flags":         ["6-month gap 2021", "4 jobs in 3 years"],
     #   "jd_requirements":   ["Python", "3+ years", "AWS"],   ← parsed from JD
     # }
+    
+    
+    # ── domain check output (Day 22) ─────────────────────────────────────────
+    domain_verdict:      Optional[str]    # MATCH | ADJACENT | MISMATCH
+    domain_penalty:      Optional[float]  # score deduction applied in aggregator
+    transferable_skills: Optional[List[str]]  # passed to scorer for ADJACENT
 
     # ── scorer output ────────────────────────────────────────────────────────
     dimension_scores: Optional[Dict[str, AgentScore]]
