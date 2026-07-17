@@ -50,55 +50,72 @@ DOMAIN_CHECK_SYSTEM = """You are a domain relevance classifier for a technical h
 Analyze the candidate's background against the job description and classify domain relevance.
 Respond with valid JSON only. No preamble, no markdown, no explanations."""
 
-DOMAIN_CHECK_PROMPT = """Classify the domain relevance between this candidate and the target role.
+DOMAIN_CHECK_PROMPT = """You must classify a candidate's domain relevance to a Software Engineering role.
 
-TARGET ROLE: {target_role}
-JOB DESCRIPTION:
+━━━ CLASSIFICATION EXAMPLES (learn from these) ━━━
+
+EXAMPLE 1 → MISMATCH:
+Titles: Hair Stylist, Salon Manager
+Skills: Cutting, Colouring, Customer Service
+Achievements: None quantified
+Certifications: None technical
+Result: {{"verdict": "MISMATCH", "reasoning": "Zero technical overlap"}}
+
+EXAMPLE 2 → ADJACENT:
+Titles: Video Producer, Production Coordinator
+Skills: Adobe CS5, Hootsuite, Final Cut Pro
+Achievements: Increased engagement by 20%, coordinated 100-person team
+Certifications: Hootsuite Certified, Adobe CS5 Certified
+Result: {{"verdict": "ADJACENT", "reasoning": "Technical certifications + quantified metrics + large-scale pipeline coordination"}}
+
+EXAMPLE 3 → ADJACENT:
+Titles: Marketing Analyst, Campaign Manager
+Skills: Google Analytics, Salesforce, Excel, A/B testing
+Achievements: Reduced CPA by 35%, managed $2M budget
+Certifications: Google Analytics Certified
+Result: {{"verdict": "ADJACENT", "reasoning": "Data analytics tools + quantified outcomes + systems thinking"}}
+
+EXAMPLE 4 → MATCH:
+Titles: Backend Developer, Software Engineer Intern
+Skills: Python, REST APIs, PostgreSQL, Docker
+Achievements: Reduced latency by 40%
+Result: {{"verdict": "MATCH", "reasoning": "Direct software engineering background"}}
+
+EXAMPLE 5 → MISMATCH:
+Titles: Fashion Designer, Textile Artist
+Skills: Sketching, Fabric selection, Hand sewing
+Achievements: None quantified, no tools
+Result: {{"verdict": "MISMATCH", "reasoning": "No technical tools, no metrics, no engineering overlap"}}
+
+━━━ CLASSIFICATION RULE SUMMARY ━━━
+ADJACENT requires ANY TWO of:
+  [A] Technical software certification (Adobe, Hootsuite, AWS, Google, Salesforce)
+  [B] Quantified metric (%, $, time, people count, scale)
+  [C] Coordination of 20+ people or multi-stage technical workflow
+  [D] Data-driven decision making (analytics, reporting, optimisation)
+
+MISMATCH = zero of the above signals present.
+
+━━━ NOW CLASSIFY THIS CANDIDATE ━━━
+
+JOB DESCRIPTION (target role):
 {jd_text}
 
-CANDIDATE BACKGROUND:
+CANDIDATE:
 Titles: {job_titles}
 Skills: {skills}
 Companies: {companies}
-Key Achievements/Metrics: {achievements}
-Resume Context (first 1200 chars):
-{resume_context}
+Achievements: {achievements}
+Resume excerpt: {resume_context}
 
-CLASSIFICATION RULES:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-MATCH: Direct overlap with target domain (e.g., Software Engineer for SE role).
-
-ADJACENT: Different primary field BUT shows clear transferable signals.
-Classify as ADJACENT if ANY TWO of these are present:
-  • Technical tooling proficiency (Adobe Suite, analytics platforms, certified software)
-  • Quantified metrics showing analytical/data-driven decisions (%, $, time saved, scale)
-  • Large-scale project/team coordination (50+ people, multi-stage workflows, pipelines)
-  • Professional certifications or structured methodology adoption
-  • Systems thinking or process optimization
-
-MISMATCH: Zero technical overlap. No tooling, no metrics, no scale coordination,
-no certifications. Purely non-technical role with no transferable signals.
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-CRITICAL RULES:
-1. Default toward ADJACENT over MISMATCH when uncertain.
-2. Do NOT require programming experience for ADJACENT.
-3. Certifications or quantified project metrics alone are sufficient for ADJACENT.
-4. Only use MISMATCH when there is genuinely zero overlap.
-
-Return ONLY this JSON:
+Return ONLY this JSON (no other text):
 {{
-  "verdict": "MATCH" | "ADJACENT" | "MISMATCH",
-  "candidate_domain": "one phrase describing their field",
-  "jd_domain": "one phrase from the JD",
-  "reasoning": "one sentence explaining the classification based on the rules above",
-  "transferable_skills": ["list specific transferable signals found, e.g., 'Adobe CS5 certification', 'data-driven editing (20% metric)', '100-person production coordination']
-}}
-
-For MISMATCH, transferable_skills must be [].
-For ADJACENT, transferable_skills must contain at least 2 items.
-"""
-
+  "verdict": "MATCH" or "ADJACENT" or "MISMATCH",
+  "candidate_domain": "short phrase",
+  "jd_domain": "short phrase",
+  "reasoning": "cite which signals A/B/C/D triggered ADJACENT, or why none exist for MISMATCH",
+  "transferable_skills": ["signal 1", "signal 2"]
+}}"""
 
 def domain_check_node(state: PipelineState) -> Dict[str, Any]:
     """
@@ -111,23 +128,28 @@ def domain_check_node(state: PipelineState) -> Dict[str, Any]:
     facts = state.get("extracted_facts")
     if not facts:
         return {
-            "domain_verdict": "MATCH",
-            "domain_penalty": 0.0,
+            "domain_verdict":      "MATCH",
+            "domain_penalty":      0.0,
             "transferable_skills": [],
-            "error": None,
+            "error":               None,
         }
 
-    # Safely extract context for the LLM
-    target_role = state.get("jd_text", "").split("\n")[0].strip() or "Software Engineering"
-    job_titles = ", ".join(facts.get("job_titles", []) or ["unknown"])
-    skills = ", ".join(facts.get("skills_found", [])[:20])
-    companies = ", ".join(facts.get("companies", []) or ["unknown"])
-    achievements = "\n".join(facts.get("achievements", [])[:5]) if facts.get("achievements") else "Not explicitly extracted"
-    resume_context = state.get("resume_text", "")[:1200]
+    # Build context for the LLM
+    target_role    = state.get("jd_text", "").split("\n")[0].strip() or "Software Engineering"
+    job_titles     = ", ".join(facts.get("job_titles",   []) or ["unknown"])
+    skills         = ", ".join(facts.get("skills_found", [])[:20])
+    companies      = ", ".join(facts.get("companies",    []) or ["unknown"])
+    achievements   = (
+        "\n".join(facts.get("achievements", [])[:5])
+        if facts.get("achievements")
+        else "See resume excerpt below"
+    )
+    # Pass raw resume text so certifications and metrics are visible
+    resume_context = state.get("resume_text", "")[:1500]
 
     prompt = DOMAIN_CHECK_PROMPT.format(
         target_role    = target_role,
-        jd_text        = state["jd_text"][:1000],
+        jd_text        = state["jd_text"][:800],
         job_titles     = job_titles,
         skills         = skills,
         companies      = companies,
@@ -137,54 +159,72 @@ def domain_check_node(state: PipelineState) -> Dict[str, Any]:
 
     try:
         response = _get_client().chat.completions.create(
-            model=MODEL,
-            messages=[
+            model       = MODEL,
+            messages    = [
                 {"role": "system", "content": DOMAIN_CHECK_SYSTEM},
                 {"role": "user",   "content": prompt},
             ],
-            max_tokens=300,
-            temperature=0.0,
+            max_tokens  = 300,
+            temperature = 0.0,
         )
 
         raw = response.choices[0].message.content.strip()
-        
-        # Strip markdown code blocks if present
+
+        # Strip markdown code fences if model wraps output
         if raw.startswith("```"):
             raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
-            
+
+        # Extract JSON object robustly
         start = raw.find("{")
         end   = raw.rfind("}") + 1
         if start != -1 and end > start:
             raw = raw[start:end]
 
-        result   = json.loads(raw)
-        verdict  = result.get("verdict", "MATCH")
+        result  = json.loads(raw)
+        verdict = result.get("verdict", "MATCH").upper().strip()
+
+        # Normalise any unexpected model output
+        if verdict not in ("MATCH", "ADJACENT", "MISMATCH"):
+            verdict = "MATCH"
+
         penalty  = DOMAIN_PENALTIES.get(verdict, 0.0)
         transfer = result.get("transferable_skills", [])
 
-        # Enforce ADJACENT contract
+        # Enforce ADJACENT contract — must have at least 2 signals
         if verdict == "ADJACENT" and len(transfer) < 2:
-            transfer = [result.get("reasoning", "transferable signals present")]
+            transfer = [result.get("reasoning", "transferable signals detected")]
 
+        # Logging
         print(f"[domain] {verdict} — {result.get('candidate_domain')} "
               f"vs {result.get('jd_domain')}")
+
         if verdict == "MISMATCH":
             print(f"[domain] ⚠ Applying domain penalty: -{penalty} pts")
         elif verdict == "ADJACENT":
-            print(f"[domain] ℹ Transferable skills: {transfer}")
+            print(f"[domain] ℹ Transferable: {transfer}")
+            print(f"[domain] ℹ Penalty: -{penalty} pts")
 
         return {
             "domain_verdict":      verdict,
             "domain_penalty":      penalty,
             "transferable_skills": transfer,
-            "error": None,
+            "error":               None,
         }
 
-    except Exception as e:
-        print(f"[domain] ✗ Error: {e} — defaulting to MATCH (safe fallback)")
+    except json.JSONDecodeError as e:
+        print(f"[domain] ✗ JSON parse error: {e} — defaulting to MATCH")
         return {
             "domain_verdict":      "MATCH",
             "domain_penalty":      0.0,
             "transferable_skills": [],
-            "error": None,
+            "error":               str(e),
+        }
+
+    except Exception as e:
+        print(f"[domain] ✗ Unexpected error: {e} — defaulting to MATCH")
+        return {
+            "domain_verdict":      "MATCH",
+            "domain_penalty":      0.0,
+            "transferable_skills": [],
+            "error":               str(e),
         }
