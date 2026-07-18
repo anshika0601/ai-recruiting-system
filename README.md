@@ -21,103 +21,103 @@ This platform solves that with a multi-agent pipeline where **every score cites 
 
 ## Demo
 
-Upload a resume PDF → paste a job description → get a fully explained, evidence-backed score in 30–60 seconds.
+Upload a resume PDF → paste a job description → get a fully explained,
+evidence-backed score in 30–60 seconds.
+
+```
 [extractor] ✓ Found 36 skills, 7 JD matches
-[domain] MATCH — Machine Learning Engineering vs ML Engineering
-[scorer] Core Skill Match runs=[3,3,4] median=3 ✓
-[scorer] Experience Relevance runs=[4,4,4] median=4 ✓
-[scorer] Achievement Evidence runs=[4,4,4] median=4 ✓
-[scorer] Career Trajectory runs=[4,4,4] median=4 ✓
-[scorer] Red Flags runs=[3,3,3] median=3 ✓
-[guard] ✓ Clean — no issues detected
+[domain]    MATCH — Machine Learning Engineering vs ML Engineering
+[scorer]    Core Skill Match      runs=[3,3,4] median=3 ✓
+[scorer]    Experience Relevance  runs=[4,4,4] median=4 ✓
+[scorer]    Achievement Evidence  runs=[4,4,4] median=4 ✓
+[scorer]    Career Trajectory     runs=[4,4,4] median=4 ✓
+[scorer]    Red Flags             runs=[3,3,3] median=3 ✓
+[guard]     ✓ Clean — no issues detected
 
 ──────────────────────────────────────────────────
-CANDIDATE : Anshika Bijalwan
+  CANDIDATE : Anshika Bijalwan
 ──────────────────────────────────────────────────
-Core Skill Match 3/5 1.80 pts
-Experience Relevance 4/5 2.00 pts
-Achievement Evidence 4/5 1.60 pts
-Career Trajectory 4/5 1.20 pts
-Red Flags 3/5 -0.50 pts
+  Core Skill Match      3/5   1.80 pts
+  Experience Relevance  4/5   2.00 pts
+  Achievement Evidence  4/5   1.60 pts
+  Career Trajectory     4/5   1.20 pts
+  Red Flags             3/5  -0.50 pts
 ──────────────────────────────────────────────────
-FINAL SCORE : 6.10 / 10.00
+  FINAL SCORE : 6.10 / 10.00
 ──────────────────────────────────────────────────
-Every score is backed by specific evidence quoted from the resume — no black-box numbers.
+```
 
+Every score is backed by specific evidence quoted from the resume — no
+black-box numbers.
 ---
 
 ## Architecture
-┌─────────────────────────────────────────────────────────────────┐
-│ INPUT LAYER │
-│ │
-│ Resume PDFs ──────────────────────► Job Description (text) │
-│ │ │ │
-│ ▼ │ │
-│ ┌──────────┐ │ │
-│ │ Parser │ column-aware pdfplumber │ │
-│ │ │ x-coord clustering │ │
-│ └────┬─────┘ synonym section detection │ │
-│ │ │ │
-│ ▼ │ │
-│ ┌──────────┐ │ │
-│ │ Embedder │ all-MiniLM-L6-v2 (local) │ │
-│ │ │ section-weighted text │ │
-│ │ │ Chroma vector store │ │
-│ └────┬─────┘ │ │
-│ │ semantic search (top-K) │ │
-└────────┼───────────────────────────────────────┼───────────────┘
-│ │
-└───────────────┬───────────────────────┘
-│
-┌────────────────────────▼────────────────────────────────────────┐
-│ LANGGRAPH PIPELINE │
-│ │
-│ ┌─────────────┐ │
-│ │ Extractor │ resume → structured facts │
-│ │ Agent │ skills, years exp, achievements, red flags │
-│ │ │ temperature=0.0 (deterministic) │
-│ └──────┬──────┘ │
-│ │ │
-│ ▼ │
-│ ┌─────────────┐ MATCH ─────────────────────────────────┐ │
-│ │ Domain │ │ │
-│ │ Check │ ADJACENT ─────────────────────────┐ │ │
-│ │ │ │ │ │
-│ └──────┬──────┘ MISMATCH → skip scorer (−3.0 pts) │ │ │
-│ │ (saves 15 LLM calls on wrong-domain) │ │ │
-│ ▼ │ │ │
-│ ┌─────────────┐ ◄───────────────────────────────────── │ │
-│ │ Scorer │ 5 dimensions × 3 runs = 15 LLM calls │ │
-│ │ Agent │ evidence → reasoning → score (order!) │ │
-│ │ │ median vote + disagreement flag │ │
-│ └──────┬──────┘ ◄─────────────────────────────────────── │
-│ │ │
-│ ▼ │
-│ ┌─────────────┐ │
-│ │ Guard │ keyword stuffing detection │
-│ │ Agent │ skill inflation, JD mirroring │
-│ │ │ experience mismatch │
-│ └──────┬──────┘ │
-│ │ │
-│ ▼ │
-│ ┌─────────────┐ │
-│ │ Aggregator │ weighted sum → 0-10 final score │
-│ │ │ domain + guard penalties applied │
-│ └─────────────┘ │
-│ │
-└─────────────────────────────────────────────────────────────────┘
-│
-▼
-┌────────────────────────────────────────────────────────────────┐
-│ OUTPUT LAYER │
-│ │
-│ FastAPI REST API ──────────────────► Recruiter UI │
-│ /resumes/upload drag-drop PDF upload │
-│ /screen score breakdown │
-│ /search (fast) evidence per dim │
-│ /health guard flag display │
-└────────────────────────────────────────────────────────────────┘
----
+
+Five agents orchestrated by LangGraph with conditional routing. Domain
+mismatches skip the expensive scoring step; disagreement flags surface
+ambiguous candidates for human review.
+
+```
+                    Resume PDF                 Job Description
+                        │                           │
+                        ▼                           │
+                  ┌───────────┐                     │
+                  │  Parser   │  column-aware       │
+                  │           │  pdfplumber         │
+                  └─────┬─────┘                     │
+                        │                           │
+                        ▼                           │
+                  ┌───────────┐                     │
+                  │ Embedder  │  MiniLM + Chroma    │
+                  └─────┬─────┘                     │
+                        │                           │
+                        └─────────────┬─────────────┘
+                                      │
+                                      ▼
+                              ┌───────────────┐
+                              │   Extractor   │  facts, skills, exp
+                              └───────┬───────┘
+                                      │
+                                      ▼
+                              ┌───────────────┐
+                              │ Domain Check  │ ─── MISMATCH ──┐
+                              └───────┬───────┘   skip scorer  │
+                                      │           (−3.0 pts)   │
+                                      │ MATCH / ADJACENT       │
+                                      ▼                        │
+                              ┌───────────────┐                │
+                              │    Scorer     │  5 dims × 3    │
+                              │               │  median vote   │
+                              └───────┬───────┘                │
+                                      │                        │
+                                      ▼                        │
+                              ┌───────────────┐                │
+                              │     Guard     │  stuffing,     │
+                              │               │  mirroring     │
+                              └───────┬───────┘                │
+                                      │                        │
+                                      ▼                        │
+                              ┌───────────────┐ ◄──────────────┘
+                              │  Aggregator   │  weighted final
+                              │               │  score (0–10)
+                              └───────┬───────┘
+                                      │
+                                      ▼
+                              FastAPI + Frontend
+```
+
+**Pipeline entry points:**
+
+| Component | Responsibility |
+|---|---|
+| Parser    | Column-aware PDF extraction with x-coordinate clustering |
+| Embedder  | Section-weighted embeddings stored in Chroma for fast retrieval |
+| Extractor | Structured facts (skills, years, achievements) at temperature 0.0 |
+| Domain Check | Classifies MATCH / ADJACENT / MISMATCH; short-circuits wrong-domain resumes |
+| Scorer    | 5 rubric dimensions, scored 3× each with median voting |
+| Guard     | Detects keyword stuffing, JD mirroring, experience inflation |
+| Aggregator | Weighted sum with domain and guard penalties applied |
+
 
 ## Evaluation
 
@@ -134,7 +134,7 @@ The pipeline was evaluated against a human-ranked baseline of **9 resumes** span
 
 **Why Top-3 overlap matters most.** In a real screening workflow, a recruiter interviews the top few candidates. If the pipeline surfaces the same top-3 as a human reviewer, downstream ranking noise has no operational impact. Both versions achieve 100% on this metric.
 
-**Why Spearman improved.** Adding the domain-check node (Day 22) let the pipeline distinguish domain relevance (MATCH / ADJACENT / MISMATCH) *before* scoring. This prevented the scorer from producing false-positive high scores on wrong-domain resumes and let the overall rank order align more closely with human judgment.
+**Why Spearman improved.** Adding the domain-check node let the pipeline distinguish domain relevance (MATCH / ADJACENT / MISMATCH) *before* scoring. This prevented the scorer from producing false-positive high scores on wrong-domain resumes and let the overall rank order align more closely with human judgment.
 
 ### Ablation — single-prompt LLM vs multi-agent pipeline
 
@@ -193,37 +193,44 @@ Every major architectural choice was validated against a single-prompt baseline 
 ---
 
 ## Project Structure
+
+```
 ai-recruiting-system/
 ├── app/
-│ ├── config.py # pydantic-settings env loading
-│ ├── main.py # FastAPI app + CORS
-│ ├── routes.py # 7 REST endpoints
-│ ├── parser.py # column-aware PDF parser
-│ └── embedder.py # sentence-transformers + Chroma
+│   ├── config.py               pydantic-settings env loading
+│   ├── main.py                 FastAPI app + CORS
+│   ├── routes.py               7 REST endpoints
+│   ├── parser.py               column-aware PDF parser
+│   └── embedder.py             sentence-transformers + Chroma
+│
 ├── graphs/
-│ ├── pipeline_state.py # shared LangGraph TypedDict state
-│ ├── pipeline.py # full graph: 5 nodes + conditional edges
-│ ├── extractor_agent.py # resume → structured facts
-│ ├── domain_check.py # MATCH | ADJACENT | MISMATCH classifier
-│ ├── scorer_agent.py # rubric scoring × 3 runs per dimension
-│ ├── guard_agent.py # keyword stuffing + gaming detection
-│ ├── aggregator.py # weighted final score
-│ └── rubric.py # single source of truth for dimensions
+│   ├── pipeline_state.py       shared LangGraph TypedDict
+│   ├── pipeline.py             full graph: 5 nodes + conditional edges
+│   ├── extractor_agent.py      resume → structured facts
+│   ├── domain_check.py         MATCH / ADJACENT / MISMATCH classifier
+│   ├── scorer_agent.py         rubric scoring × 3 runs per dimension
+│   ├── guard_agent.py          keyword stuffing + gaming detection
+│   ├── aggregator.py           weighted final score
+│   └── rubric.py               single source of truth for dimensions
+│
 ├── evaluation/
-│ ├── metrics.py # MAE, Top-K, Spearman, exact-match
-│ ├── run_evaluation_v2.py # baseline evaluation harness
-│ ├── ablation.py # single-prompt vs pipeline comparison
-│ ├── run_evaluation_v2.py # post-domain-check comparison
-│ ├── v1_results.json # measured metrics per version
-  ├── v2_results.json # measured metrics per version
-│ └── EVALUATION.md # detailed v1 vs v2 writeup
+│   ├── metrics.py              MAE, Top-K, Spearman, exact-match
+│   ├── ablation.py             single-prompt vs pipeline comparison
+│   ├── run_evaluation_v2.py    v1 vs v2 with all 4 metrics
+│   ├── v1_results.json         baseline metrics
+│   ├── v2_results.json         post-domain-check metrics
+│   └── EVALUATION.md           detailed v1 vs v2 writeup
+│
 ├── frontend/
-│ └── index.html # recruiter dashboard (drag-drop, score UI)
+│   └── index.html              recruiter dashboard (drag-drop, score UI)
+│
 ├── tests/
-│ └── test_pipeline.py # 39 pytest unit tests
-├── pdf_parder.py
-└── requirements.txt
----
+│   └── test_pipeline.py        39 pytest unit tests
+│
+├── requirements.txt
+└── README.md
+```
+
 
 ## Setup
 
@@ -285,20 +292,6 @@ JSON parse failures (~5% of runs). LLM output occasionally contains smart quotes
 
 Evaluation sample size (n=9). Large enough to demonstrate direction of improvement (Spearman up, MAE down, guard false-positives eliminated) but too small for statistically-tight accuracy claims. A production version would need 50+ labelled resumes across multiple JDs.
 
-What I'd Do Differently
-Parallelize scorer dimensions. Five sequential LLM calls could run concurrently with asyncio.gather(), reducing latency from ~45s to ~15s per candidate.
-Tighten ADJACENT classification. Require specifically technical certifications (cloud, analytics, developer tools, project management platforms) rather than any certification. This would flip Michelle Lopez and Julie Monroe from ADJACENT to MISMATCH and lift Spearman further.
-Fine-tune section detection. Replace the rule-based synonym map with a small NER model trained on real resume headers.
-Persist pipeline results. Store screening results in SQLite so recruiters can compare runs over time and audit past decisions.
-Report confidence intervals. Surface scores as "6.1 ± 0.8" using the disagreement spread across the 3 scorer runs, rather than a false-precision single number.
-Expand the evaluation set. n=9 is enough for direction; n=50+ is needed for magnitude claims.
-What This Project Demonstrates
-Multi-agent orchestration with real conditional routing (LangGraph)
-Prompt engineering with measured impact — every prompt change validated against ground-truth ranking
-Self-consistency techniques — 3× voting, median aggregation, disagreement flagging
-Adversarial-input defense — a dedicated guard agent that resists keyword stuffing and JD mirroring, with an explicit fairness contract for legitimate candidates
-Explainability by construction — every score carries evidence, every penalty is itemized
-Evaluation discipline — labeled test set, multiple metrics, ablation study, honest documentation of known limitations
-Production-oriented engineering — 39 pytest unit tests, structured logging, LangSmith tracing, FastAPI REST layer with OpenAPI docs
+
 
 Built by Anshika Bijalwan
