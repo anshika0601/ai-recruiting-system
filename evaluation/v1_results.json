@@ -1,0 +1,101 @@
+{
+  "Software Engineer": {
+    "accuracy": 0.5555555555555556,
+    "baseline": 0.0,
+    "delta": 0.5555555555555556,
+    "matches": 5,
+    "total": 9,
+    "details": [
+      {
+        "resume_id": "Akhilesh-Rawat-Resume",
+        "candidate": "AKHILESH RAWAT",
+        "agent_rank": 1,
+        "human_rank": 2,
+        "score": 4.58,
+        "match": true,
+        "needs_review": true,
+        "guard_flags": 4
+      },
+      {
+        "resume_id": "Anshika_Bijalwan_Resume_Final",
+        "candidate": "Anshika Bijalwan",
+        "agent_rank": 2,
+        "human_rank": 1,
+        "score": 3.47,
+        "match": true,
+        "needs_review": true,
+        "guard_flags": 5
+      },
+      {
+        "resume_id": "Ux-designer-resume-example-5",
+        "candidate": "John Huber, UX Designer",
+        "agent_rank": 3,
+        "human_rank": 3,
+        "score": 3.03,
+        "match": true,
+        "needs_review": true,
+        "guard_flags": 3
+      },
+      {
+        "resume_id": "Moscow-Creative-Resume-Template",
+        "candidate": "MICHELLE LOPEZ, Fashion Designer",
+        "agent_rank": 4,
+        "human_rank": 9,
+        "score": 1.9,
+        "match": false,
+        "needs_review": true,
+        "guard_flags": 5
+      },
+      {
+        "resume_id": "Amsterdam-Modern-Resume-Template",
+        "candidate": "JULIE MONROE",
+        "agent_rank": 5,
+        "human_rank": 8,
+        "score": 1.65,
+        "match": false,
+        "needs_review": true,
+        "guard_flags": 3
+      },
+      {
+        "resume_id": "Dublin-Resume-Template-Modern",
+        "candidate": "Esther Scott",
+        "agent_rank": 6,
+        "human_rank": 6,
+        "score": 1.52,
+        "match": true,
+        "needs_review": true,
+        "guard_flags": 4
+      },
+      {
+        "resume_id": "Sydney-Resume-Template-Modern",
+        "candidate": "Kristen Connelly",
+        "agent_rank": 7,
+        "human_rank": 4,
+        "score": 1.02,
+        "match": false,
+        "needs_review": true,
+        "guard_flags": 5
+      },
+      {
+        "resume_id": "Personal-trainer-resume-example-3",
+        "candidate": "Charly Dolman",
+        "agent_rank": 8,
+        "human_rank": 7,
+        "score": 0.75,
+        "match": true,
+        "needs_review": true,
+        "guard_flags": 4
+      },
+      {
+        "resume_id": "Account-Manager-Example-PDF",
+        "candidate": "Michelle Smith",
+        "agent_rank": 9,
+        "human_rank": 5,
+        "score": 0.2,
+        "match": false,
+        "needs_review": true,
+        "guard_flags": 5
+      }
+    ]
+  }
+}
