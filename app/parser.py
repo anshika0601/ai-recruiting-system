@@ -226,7 +226,10 @@ def _extract_name(raw_text: str) -> Optional[str]:
         # Skip lines that contain known non-name content
         if any(skip in line_lower for skip in _NAME_SKIP_PATTERNS):
             continue
- 
+        
+        if line[0].isdigit():
+            continue
+        
         word_count = len(line.split())
  
         # Names are typically 2–5 words

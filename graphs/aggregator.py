@@ -9,6 +9,8 @@ back to evidence from the resume.
 
 Input  (from PipelineState): dimension_scores, guard_flags, guard_penalty
 Output (to PipelineState):   final_score, score_breakdown, needs_review
+
+ updates applies domain penalty alongside guard penalty.
 """
 from typing import Any, Dict
 
@@ -30,8 +32,9 @@ def aggregator_node(state: PipelineState) -> Dict[str, Any]:
     """
     candidate = state.get("candidate_name", "unknown")
     print(f"[aggregator] Computing final score for: {candidate}")
-
-    if not state.get("dimension_scores"):
+    
+    domain_verdict = state.get("domain_verdict", "MATCH") or "MATCH"
+    if not state.get("dimension_scores") and domain_verdict != "MISMATCH":
         print("[aggregator] ✗ No dimension_scores in state")
         return {
             "final_score":     None,
@@ -40,9 +43,11 @@ def aggregator_node(state: PipelineState) -> Dict[str, Any]:
             "error": "Aggregator requires dimension_scores from scorer agent",
         }
 
-    dim_scores   = state["dimension_scores"]
+    dim_scores   = state.get("dimension_scores") or {}
     guard_penalty = state.get("guard_penalty", 0.0) or 0.0
     guard_flags   = state.get("guard_flags", []) or []
+    domain_penalty = state.get("domain_penalty", 0.0) or 0.0
+    
 
     # ── compute weighted sum ────────────────────────────────────────────────
     breakdown = {}
@@ -53,7 +58,9 @@ def aggregator_node(state: PipelineState) -> Dict[str, Any]:
         agent_score = dim_scores.get(dim)
 
         if not agent_score:
-            continue
+            # MISMATCH candidates skip scorer — use minimum scores
+            agent_score = {"median": 1, "disagreement": False,
+                           "run_1": {"evidence": [], "reasoning": "Domain mismatch — scorer skipped", "score": 1}}
 
         median  = agent_score["median"]
         weight  = rubric_def["weight"]
@@ -83,11 +90,11 @@ def aggregator_node(state: PipelineState) -> Dict[str, Any]:
 
     # ── apply guard penalty ─────────────────────────────────────────────────
     raw_score   = max(0.0, weighted_sum)
-    final_score = round(max(0.0, raw_score - guard_penalty), 2)
+    final_score = round(max(0.0, raw_score - guard_penalty-domain_penalty), 2)
 
     # ── needs_review flag ───────────────────────────────────────────────────
     any_disagreement = any(
-        dim_scores[d]["disagreement"]
+        dim_scores.get(d,{}).get("disagreement",False)
         for d in DIMENSION_ORDER
         if d in dim_scores
     )
@@ -102,6 +109,10 @@ def aggregator_node(state: PipelineState) -> Dict[str, Any]:
         sign = "" if b["contribution"] >= 0 else ""
         print(f"  {flag} {b['label']:26s} {b['median_score']}/5  "
               f"{sign}{abs(b['contribution']):.2f} pts")
+
+    if domain_penalty > 0:
+        print(f"    {'Domain (' + domain_verdict + ')':26s}        -{domain_penalty:.2f} pts")
+
     if guard_penalty > 0:
         print(f"    {'Guard penalty':26s}        -{guard_penalty:.2f} pts")
     print(f"{'─'*50}")
@@ -116,6 +127,8 @@ def aggregator_node(state: PipelineState) -> Dict[str, Any]:
             "dimensions":     breakdown,
             "raw_score":      round(raw_score, 2),
             "guard_penalty":  guard_penalty,
+            "domain_penalty": domain_penalty,
+            "domain_verdict": domain_verdict,
             "guard_flags":    guard_flags,
             "final_score":    final_score,
         },

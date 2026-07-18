@@ -150,14 +150,43 @@ if __name__ == "__main__":
         sys.exit(1)
 
     test_jd = """
-    Software Engineer
-    Requirements:
-    - Backend development (Python, Java, or similar)
-    - REST API design and development
-    - Database knowledge (MySQL, PostgreSQL)
-    - Git version control
-    - Problem-solving skills
-    - Projects demonstrating coding ability
+    Junior ML/AI Engineer — New Grad / Intern to Full-Time
+Location: Remote / Hybrid
+
+About the Role:
+We are looking for a motivated Junior ML Engineer to join our
+AI team. This role is ideal for recent graduates or strong
+interns who have built real ML systems through projects or
+internships.
+
+Requirements:
+MUST HAVE:
+- Python proficiency with ML libraries (PyTorch, TensorFlow,
+  or Scikit-learn)
+- Experience building and evaluating ML models (classification,
+  regression, or NLP)
+- Familiarity with data pipelines and preprocessing
+  (Pandas, NumPy)
+- Version control with Git
+- Ability to document and communicate technical results
+
+NICE TO HAVE:
+- Experience with LLMs or RAG pipelines (LangChain, FAISS,
+  HuggingFace)
+- MLOps tools (MLflow, Docker, experiment tracking)
+- Cloud deployment experience (Azure, AWS, or GCP)
+- REST API development (Flask or FastAPI)
+- Quantified project results demonstrating engineering impact
+
+What We Value Over Years of Experience:
+- Real systems you have built and deployed
+- Measurable outcomes (recall, latency, accuracy improvements)
+- Self-directed learning through certifications or open-source
+- Strong fundamentals: OOP, DSA, System Design
+
+Education:
+- Bachelor's or Master's in CS, Data Science, or related field
+- Final year students and recent graduates encouraged to apply
     """
 
     parsed = parse_resume(sys.argv[1])
