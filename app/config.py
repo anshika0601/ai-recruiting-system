@@ -11,11 +11,7 @@ class Settings(BaseSettings):
     # LLM providers
     groq_api_key: str = os.getenv("GROQ_API_KEY", "")
     groq_model: str = "llama-3.3-70b-versatile"
-    anthropic_api_key: str = ""
-    openai_api_key: str = ""
 
-    # Embeddings
-    voyage_api_key: str = ""
 
     # Vector DB
     chroma_persist_dir: str = "./chroma_data"
