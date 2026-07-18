@@ -147,7 +147,7 @@ The multi-agent pipeline reduces score variance by **~64%**. The pipeline's prim
 
 ### Known limitation
 
-The ADJACENT domain classification is currently too permissive on candidates with non-technical certifications (fashion, personal training). Full analysis and proposed fix in [`docs/EVALUATION.md`](docs/EVALUATION.md).
+The ADJACENT domain classification is currently too permissive on candidates with non-technical certifications (fashion, personal training). Full analysis and proposed fix in [`evaluation/evaluation.md`](evaluation/evaluation.md).
 
 ---
 
